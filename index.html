@@ -29,41 +29,26 @@
 
 <script>
 // ===============================
-// ★ 祐紀が置き換える場所（2か所）
+// ★ Worker URL（祐紀の URL を入れる）
 // ===============================
-const GIST_ID = "594cb64af43de12fa24d5a196680eaa5";   // ← Gist ID を入れる
-const TOKEN   = "YOUR_TOKEN_HERE";     // ← Classic Token を入れる
+const WORKER_URL = "https://lesson-worker.yuki425-yama.workers.dev";
 
 // ===============================
-// Gist からデータを取得
+// Worker からデータを取得
 // ===============================
 async function loadLessons() {
-  //const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-  const res = await fetch(`https://lesson-worker.yuki425-yama.workers.dev`, {
-    headers: { Authorization: `Bearer ${TOKEN}` }
-  });
-  const data = await res.json();
-  return JSON.parse(data.files["lessons.json"].content);
+  const res = await fetch(WORKER_URL);
+  return await res.json();   // ← Worker が JSON を返すのでこれでOK
 }
 
 // ===============================
-// Gist にデータを書き込む
+// Worker にデータを書き込む
 // ===============================
 async function saveLessons(lessons) {
- // await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-await fetch(`https://lesson-worker.yuki425-yama.workers.dev`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${TOKEN}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      files: {
-        "lessons.json": {
-          content: JSON.stringify(lessons, null, 2)
-        }
-      }
-    })
+  await fetch(WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(lessons)
   });
 }
 
