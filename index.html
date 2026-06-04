@@ -3,52 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>レッスンスケジュール</title>
+<title>レッスンスケジュール（同期版）</title>
+
 <style>
-  body { font-family: sans-serif; margin: 10px; }
-  h1 { font-size: 20px; margin-bottom: 10px; }
-  table { border-collapse: collapse; width: 100%; font-size: 12px; }
-  th, td {
-    border: 1px solid #ccc;
-    padding: 6px;
-    text-align: center;
-    height: 60px;
-    vertical-align: top;
-  }
-  .lesson {
-    background: #dff0ff;
-    border-radius: 6px;
-    padding: 3px;
-    margin-top: 3px;
-    font-size: 11px;
-  }
-  #form-area {
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #aaa;
-    border-radius: 6px;
-    font-size: 14px;
-  }
-  input, button {
-    font-size: 14px;
-    padding: 6px;
-    width: 100%;
-    margin-top: 5px;
-  }
-  button {
-    background: #007bff;
-    color: white;
-    border: none;
-    border-radius: 4px;
-  }
+  body { font-family: sans-serif; margin: 20px; }
+  input, button { padding: 8px; margin: 5px 0; }
+  table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+  th, td { border: 1px solid #ccc; padding: 8px; vertical-align: top; }
+  .lesson { background: #eef; margin: 4px 0; padding: 4px; border-radius: 4px; }
 </style>
 </head>
 <body>
 
-<h1>レッスンスケジュール</h1>
+<h1>レッスンスケジュール（Gist同期）</h1>
 
-<div id="form-area">
-  <strong>レッスン追加</strong><br>
+<div>
+  <h3>レッスン追加</h3>
   <input type="date" id="date">
   <input type="time" id="time">
   <input type="text" id="title" placeholder="例：タンゴ個人レッスン">
@@ -58,54 +28,102 @@
 <div id="calendar"></div>
 
 <script>
-  const calendarDiv = document.getElementById("calendar");
-  const lessons = JSON.parse(localStorage.getItem("lessons") || "[]");
+// ===============================
+// ★ 祐紀が置き換える場所（2か所）
+// ===============================
+const GIST_ID = "YOUR_GIST_ID_HERE";   // ← Gist ID を入れる
+const TOKEN   = "YOUR_TOKEN_HERE";     // ← Classic Token を入れる
 
-  function renderCalendar() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
+// ===============================
+// Gist からデータを取得
+// ===============================
+async function loadLessons() {
+  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    headers: { Authorization: `Bearer ${TOKEN}` }
+  });
+  const data = await res.json();
+  return JSON.parse(data.files["lessons.json"].content);
+}
 
-    const firstDay = new Date(year, month, 1).getDay();
-    const lastDate = new Date(year, month + 1, 0).getDate();
+// ===============================
+// Gist にデータを書き込む
+// ===============================
+async function saveLessons(lessons) {
+  await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    method: "PATCH",
+    headers: {
+      Authorization: `Bearer ${TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      files: {
+        "lessons.json": {
+          content: JSON.stringify(lessons, null, 2)
+        }
+      }
+    })
+  });
+}
 
-    let html = `<h2>${year}年 ${month + 1}月</h2>`;
-    html += "<table><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr><tr>";
+// ===============================
+// カレンダー描画
+// ===============================
+async function renderCalendar() {
+  const lessons = await loadLessons();
 
-    for (let i = 0; i < firstDay; i++) html += "<td></td>";
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
 
-    for (let day = 1; day <= lastDate; day++) {
-      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      html += `<td><strong>${day}</strong>`;
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
 
-      lessons
-        .filter(l => l.date === dateStr)
-        .forEach(l => {
-          html += `<div class="lesson">${l.time}<br>${l.title}</div>`;
-        });
+  let html = `<h2>${year}年 ${month + 1}月</h2>`;
+  html += "<table><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr><tr>";
 
-      html += "</td>";
+  for (let i = 0; i < firstDay; i++) html += "<td></td>";
 
-      if ((day + firstDay) % 7 === 0) html += "</tr><tr>";
-    }
+  for (let day = 1; day <= lastDate; day++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    html += `<td><strong>${day}</strong>`;
 
-    html += "</tr></table>";
-    calendarDiv.innerHTML = html;
+    lessons
+      .filter(l => l.date === dateStr)
+      .forEach(l => {
+        html += `<div class="lesson">${l.time}<br>${l.title}</div>`;
+      });
+
+    html += "</td>";
+
+    if ((day + firstDay) % 7 === 0) html += "</tr><tr>";
   }
 
-  function addLesson() {
-    const date = document.getElementById("date").value;
-    const time = document.getElementById("time").value;
-    const title = document.getElementById("title").value;
+  html += "</tr></table>";
+  document.getElementById("calendar").innerHTML = html;
+}
 
-    if (!date || !time || !title) return alert("すべて入力してね");
+// ===============================
+// レッスン追加
+// ===============================
+async function addLesson() {
+  const date = document.getElementById("date").value;
+  const time = document.getElementById("time").value;
+  const title = document.getElementById("title").value;
 
-    lessons.push({ date, time, title });
-    localStorage.setItem("lessons", JSON.stringify(lessons));
-    renderCalendar();
+  if (!date || !time || !title) {
+    alert("すべて入力してね");
+    return;
   }
 
+  const lessons = await loadLessons();
+  lessons.push({ date, time, title });
+
+  await saveLessons(lessons);
   renderCalendar();
+}
+
+// 初期表示
+renderCalendar();
 </script>
 
 </body>
