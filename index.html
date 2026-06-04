@@ -38,7 +38,8 @@ const TOKEN   = "YOUR_TOKEN_HERE";     // ← Classic Token を入れる
 // Gist からデータを取得
 // ===============================
 async function loadLessons() {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+  //const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+  const res = await fetch(`https://lesson-worker.yuki425-yama.workers.dev`, {
     headers: { Authorization: `Bearer ${TOKEN}` }
   });
   const data = await res.json();
@@ -49,7 +50,8 @@ async function loadLessons() {
 // Gist にデータを書き込む
 // ===============================
 async function saveLessons(lessons) {
-  await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+ // await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+await fetch(`https://lesson-worker.yuki425-yama.workers.dev`, {
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${TOKEN}`,
